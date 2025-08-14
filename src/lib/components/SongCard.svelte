@@ -121,9 +121,9 @@
             
             <!-- Expandable Lyrics -->
             {#if showLyrics && song.lyrics}
-                <div class="mt-4 pt-4 border-t border-gray-100 animate-in">
-                    <div class="lyrics-text text-sm text-gray-700 leading-relaxed">
-                        <p class="whitespace-pre-line">{song.lyrics}</p>
+                <div class="mt-4 pt-4 border-t border-gray-200 animate-in">
+                    <div class="lyrics-text bg-gray-50 rounded-lg p-4 sm:p-5">
+                        <pre class="font-sans text-gray-800 whitespace-pre-wrap break-words">{song.lyrics}</pre>
                     </div>
                 </div>
             {/if}
@@ -152,18 +152,32 @@
     }
     
     .lyrics-text {
-        font-family: system-ui, -apple-system, sans-serif;
-        letter-spacing: 0.01em;
-        line-height: 1.7;
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     }
     
+    .lyrics-text pre {
+        font-size: 1rem;
+        line-height: 1.8;
+        letter-spacing: 0.02em;
+    }
+    
+    /* Mobile: Still readable but slightly smaller */
     @container (max-width: 640px) {
         .song-card {
             font-size: 0.95rem;
         }
         
-        .lyrics-text {
-            font-size: 0.875rem;
+        .lyrics-text pre {
+            font-size: 0.9375rem; /* 15px - still very readable on mobile */
+            line-height: 1.75;
+        }
+    }
+    
+    /* Large screens: Even bigger for easier reading */
+    @container (min-width: 1024px) {
+        .lyrics-text pre {
+            font-size: 1.0625rem; /* 17px */
+            line-height: 1.85;
         }
     }
 </style>
