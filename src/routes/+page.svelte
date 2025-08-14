@@ -11,10 +11,20 @@
     let filteredSongs: Song[] = [];
     let totalSongs = 0;
     
-    // Import data utilities
+    // Filter states
+    let selectedYear = "";
+    let selectedSinger = "";
+    let selectedComposer = "";
+    
+    // Available filter options
+    let availableYears: string[] = [];
+    let availableSingers: string[] = [];
+    let availableComposers: string[] = [];
+    let showFilters = true; // Open by default
+    
     import { 
         loadSongsFromFile, 
-        searchSongs, 
+        searchSongs,
         getSongStatistics 
     } from "$lib/data/songs";
     
@@ -59,6 +69,32 @@
             filteredSongs = [...songs];
             totalSongs = songs.length;
             
+            // Extract and clean filter options
+            availableYears = [...new Set(songs.map(s => s.year).filter(Boolean))].sort();
+            
+            // Clean and deduplicate singers - remove empty strings and trim whitespace
+            const allSingers = [
+                ...songs.map(s => s.singer1),
+                ...songs.map(s => s.singer2),
+                ...songs.map(s => s.singer3)
+            ].filter(Boolean)
+             .map(s => s.trim())
+             .filter(s => s && s !== '');
+            availableSingers = [...new Set(allSingers)].sort((a, b) => 
+                a.localeCompare(b, 'el')
+            );
+            
+            // Clean and deduplicate composers
+            const allComposers = [
+                ...songs.map(s => s.composer1),
+                ...songs.map(s => s.composer2)
+            ].filter(Boolean)
+             .map(s => s.trim())
+             .filter(s => s && s !== '');
+            availableComposers = [...new Set(allComposers)].sort((a, b) => 
+                a.localeCompare(b, 'el')
+            );
+            
             // Get and log statistics
             const stats = getSongStatistics(songs);
             console.log('Song collection statistics:', stats);
@@ -67,19 +103,62 @@
         }
     });
     
-    // Search functionality
-    function handleSearch() {
-        filteredSongs = searchSongs(songs, searchQuery);
+    // Search and filter functionality
+    function applyFilters() {
+        let results = [...songs];
+        
+        // Apply search
+        if (searchQuery.trim()) {
+            results = searchSongs(results, searchQuery);
+        }
+        
+        // Apply year filter
+        if (selectedYear) {
+            results = results.filter(s => s.year === selectedYear);
+        }
+        
+        // Apply singer filter - check trimmed values
+        if (selectedSinger) {
+            results = results.filter(s => 
+                s.singer1?.trim() === selectedSinger || 
+                s.singer2?.trim() === selectedSinger || 
+                s.singer3?.trim() === selectedSinger
+            );
+        }
+        
+        // Apply composer filter - check trimmed values
+        if (selectedComposer) {
+            results = results.filter(s => 
+                s.composer1?.trim() === selectedComposer || 
+                s.composer2?.trim() === selectedComposer
+            );
+        }
+        
+        filteredSongs = results;
     }
     
     // Debounce search
     let searchTimeout: NodeJS.Timeout;
     function debounceSearch() {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(handleSearch, 300);
+        searchTimeout = setTimeout(applyFilters, 300);
     }
     
+    // Clear all filters
+    function clearFilters() {
+        searchQuery = "";
+        selectedYear = "";
+        selectedSinger = "";
+        selectedComposer = "";
+        applyFilters();
+    }
+    
+    // Check if any filters are active
+    $: hasActiveFilters = searchQuery || selectedYear || selectedSinger || selectedComposer;
+    
+    // React to filter changes
     $: searchQuery, debounceSearch();
+    $: selectedYear, selectedSinger, selectedComposer, applyFilters();
 </script>
 
 <!-- Header -->
@@ -92,13 +171,27 @@
                           d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3">
                     </path>
                 </svg>
-                <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Ρεμπέτικα</h1>
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Zorbas DB</h1>
             </div>
             
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 sm:space-x-3">
                 <span class="text-sm text-gray-500 hidden sm:inline">
-                    {filteredSongs.length} / {totalSongs} τραγούδια
+                    {filteredSongs.length} / {totalSongs}
                 </span>
+                <button
+                    on:click={() => showFilters = !showFilters}
+                    class="relative p-2 rounded-lg hover:bg-gray-100 transition-colors {showFilters ? 'bg-gray-100' : ''}"
+                    title="Φίλτρα"
+                >
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z">
+                        </path>
+                    </svg>
+                    {#if hasActiveFilters}
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-indigo-600 rounded-full"></span>
+                    {/if}
+                </button>
                 <div class="relative">
                     <input
                         type="text"
@@ -116,12 +209,66 @@
             </div>
         </div>
     </div>
+    
+    <!-- Filters Section -->
+    {#if showFilters}
+        <div class="border-t border-gray-200 bg-gray-50/80 backdrop-blur-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+                <div class="flex flex-wrap gap-2 items-center">
+                    <!-- Year Filter -->
+                    <select
+                        bind:value={selectedYear}
+                        class="text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                        <option value="">Όλα τα έτη</option>
+                        {#each availableYears as year}
+                            <option value={year}>{year}</option>
+                        {/each}
+                    </select>
+                    
+                    <!-- Singer Filter -->
+                    <select
+                        bind:value={selectedSinger}
+                        class="text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-[180px]"
+                    >
+                        <option value="">Όλοι οι τραγουδιστές</option>
+                        {#each availableSingers as singer}
+                            <option value={singer} title={singer}>{singer}</option>
+                        {/each}
+                    </select>
+                    
+                    <!-- Composer Filter -->
+                    <select
+                        bind:value={selectedComposer}
+                        class="text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-[180px]"
+                    >
+                        <option value="">Όλοι οι συνθέτες</option>
+                        {#each availableComposers as composer}
+                            <option value={composer} title={composer}>{composer}</option>
+                        {/each}
+                    </select>
+                    
+                    {#if hasActiveFilters}
+                        <button
+                            on:click={clearFilters}
+                            class="text-sm px-3 py-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors flex items-center space-x-1"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <span>Καθαρισμός</span>
+                        </button>
+                    {/if}
+                </div>
+            </div>
+        </div>
+    {/if}
 </header>
 
 <!-- Main Content -->
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     {#if filteredSongs.length > 0}
-        <div class="virtual-scroll-wrapper h-[calc(100vh-120px)] sm:h-[calc(100vh-140px)]">
+        <div class="virtual-scroll-wrapper {showFilters ? 'h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)]' : 'h-[calc(100vh-120px)] sm:h-[calc(100vh-140px)]'}">
             <VirtualScroll
                 bind:this={list}
                 data={filteredSongs}
@@ -191,6 +338,10 @@
         min-height: 100vh;
     }
     
+    .virtual-scroll-wrapper {
+        transition: height 0.3s ease;
+    }
+    
     .virtual-scroll-wrapper :global(.virtual-scroll-wrapper) {
         overflow-y: auto;
     }
@@ -217,5 +368,21 @@
     
     .virtual-scroll-wrapper :global(.virtual-scroll-wrapper::-webkit-scrollbar-thumb:hover) {
         background: #6b7280;
+    }
+    
+    /* Select dropdown styling */
+    select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+    }
+    
+    select option {
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
     }
 </style>

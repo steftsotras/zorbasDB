@@ -86,9 +86,17 @@
                     {/if}
                     <button 
                         on:click={toggleLyrics}
-                        class="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                        class="inline-flex items-center space-x-1.5 text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-all hover:bg-indigo-50 px-2 py-1 rounded-md"
                     >
-                        {showLyrics ? 'Κρύψε στίχους' : 'Στίχοι'}
+                        <svg 
+                            class="w-4 h-4 transition-transform duration-200 {showLyrics ? 'rotate-180' : ''}" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                        <span>{showLyrics ? 'Απόκρυψη' : 'Στίχοι'}</span>
                     </button>
                 </div>
                 <div class="flex items-center space-x-2">
@@ -114,9 +122,9 @@
             <!-- Expandable Lyrics -->
             {#if showLyrics && song.lyrics}
                 <div class="mt-4 pt-4 border-t border-gray-100 animate-in">
-                    <p class="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
-                        {song.lyrics}
-                    </p>
+                    <div class="lyrics-text text-sm text-gray-700 leading-relaxed">
+                        <p class="whitespace-pre-line">{song.lyrics}</p>
+                    </div>
                 </div>
             {/if}
         </div>
@@ -143,9 +151,19 @@
         animation: slideDown 0.3s ease-out;
     }
     
+    .lyrics-text {
+        font-family: system-ui, -apple-system, sans-serif;
+        letter-spacing: 0.01em;
+        line-height: 1.7;
+    }
+    
     @container (max-width: 640px) {
         .song-card {
             font-size: 0.95rem;
+        }
+        
+        .lyrics-text {
+            font-size: 0.875rem;
         }
     }
 </style>
